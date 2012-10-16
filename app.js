@@ -12,11 +12,14 @@ var util = require('util'),
 
 var StringDecoder = require('string_decoder').StringDecoder, decoder = new StringDecoder('utf8');
 
-var cacheFiles = {};
+var cacheFiles = {}, oldCacheFile = {}, reCheckFile = [];
 
 //从manifest中获取需缓存的文件及文件修改时间，放入cacheFiles中做映射
 var manifestFilter = /\.manifest$/, manifestFiles = fs.readdirSync(cwd),
-    manifestFile, manifestData;
+    manifestFile, manifestData, manifestCacheFiles,
+    getCacheVersion = function(str){ //获取版本号
+        return /\?v=(\d+)/.test(str) ? RegExp.$1 : '';
+    }
 
 for(var i in manifestFiles){
     var file = manifestFiles[i];
@@ -26,15 +29,18 @@ for(var i in manifestFiles){
         var manifestCacheFiles = manifestData.match(/(.+)/g), isFileFilter = /\.[^\.]+$/;
 
         if(manifestCacheFiles && manifestCacheFiles.length){
+
             for(var x in manifestCacheFiles){
                 var cacheFile = manifestCacheFiles[x];
                 if(cacheFile == 'NETWORK:' || cacheFile == 'FALLBACK:'){ break; }
                 else if(isFileFilter.test(cacheFile)){ //如果是缓存文件
+                    reCheckFile.push(cacheFile);
                     var fileName = cacheFile.replace(/\?v=\d+$/g, ''), mtime = fs.statSync(cwd + '/' + fileName).mtime;
                     mtime = util.format('%d%d%d%d%d', mtime.getFullYear(), mtime.getMonth() + 1, mtime.getDate(), mtime.getHours(), mtime.getMinutes());
 
-                    manifestData = manifestData.replace(cacheFile, fileName + '?v=' + mtime); //更新manifest里的相应缓存文件版本号
-                    cacheFiles[path.basename(fileName)] = mtime; //映射cache文件和cache文件的修改日期
+                    if(mtime !== getCacheVersion(cacheFile)){
+                        cacheFiles[path.basename(fileName)] = mtime; //映射cache文件和cache文件的修改日期
+                    }
                 }
             }
         }
@@ -85,6 +91,14 @@ if(cacheFilesRegExp.length){
     }
 
     cacheFilesRegExp && dirIterator(null, function(){
+        for(var x in reCheckFile){
+            var cacheFile = reCheckFile[x], fileName = cacheFile.replace(/\?v=\d+$/g, ''), 
+                mtime = fs.statSync(cwd + '/' + fileName).mtime,
+                mtime = util.format('%d%d%d%d%d', mtime.getFullYear(), mtime.getMonth() + 1, mtime.getDate(), mtime.getHours(), mtime.getMinutes());
+
+            manifestData = manifestData.replace(cacheFile, fileName + '?v=' + mtime); //更新manifest里的相应缓存文件版本号
+        }
+
         fs.writeFile(manifestFile, manifestData, function(){ console.log('finish') }); //更新整个manifest
     });
 }else{
