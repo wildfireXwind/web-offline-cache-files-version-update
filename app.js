@@ -35,7 +35,7 @@ for(var i in manifestFiles){
                 if(cacheFile == 'NETWORK:' || cacheFile == 'FALLBACK:'){ break; }
                 else if(isFileFilter.test(cacheFile)){ //如果是缓存文件
                     reCheckFile.push(cacheFile);
-                    var fileName = cacheFile.replace(/\?v=[0-9A-Za-z]+$/g, ''), mtime = fs.statSync(cwd + '/' + fileName).mtime;
+                    var fileName = cacheFile.replace(/\?v=[0-9A-Za-z]+/g, ''), mtime = fs.statSync(cwd + '/' + fileName).mtime;
                     mtime = util.format('%d%d%d%d%d', mtime.getFullYear(), mtime.getMonth() + 1, mtime.getDate(), mtime.getHours(), mtime.getMinutes());
 
                     if(mtime !== getCacheVersion(cacheFile)){
@@ -79,6 +79,7 @@ if(cacheFilesRegExpArr.length){
                                         fs.writeFile(filePath, data, function(){ //更新含缓存文件的文件
                                             console.log('update file:' + filePath);
 											if(!cacheFiles[path.basename(filePath)]){ cacheFilesRegExpArr.push(path.basename(filePath)) }
+											//TODO 有机率出现未完全统计时 len == 0
                                             !--len && success();
                                         });
                                     }
@@ -95,7 +96,7 @@ if(cacheFilesRegExpArr.length){
 		//因有多重关联时，如 a-> b-> c，更新c时，a不会更新，需2次修改
 		cacheFilesRegExp = new RegExp('[\\(\'"][A-Za-z0-9/\._-]*(' + cacheFilesRegExpArr.join('|') + ')(?:\\?v=[0-9A-Za-z]+)?[\\)\'"]', 'g'); //再次生成匹配所有cache文件的正则	
 		for(var x in reCheckFile){
-			var cacheFile = reCheckFile[x], fileName = cacheFile.replace(/\?v=[0-9A-Za-z]+$/g, ''), mtime = fs.statSync(cwd + '/' + fileName).mtime;
+			var cacheFile = reCheckFile[x], fileName = cacheFile.replace(/\?v=[0-9A-Za-z]+/g, ''), mtime = fs.statSync(cwd + '/' + fileName).mtime;
 			mtime = util.format('%d%d%d%d%d', mtime.getFullYear(), mtime.getMonth() + 1, mtime.getDate(), mtime.getHours(), mtime.getMinutes());
 
 			if(mtime !== getCacheVersion(cacheFile)){
@@ -108,7 +109,7 @@ if(cacheFilesRegExpArr.length){
 		//TODO 不需要2次修改
 		dirIterator(null, function(){
 			for(var x in reCheckFile){
-				var cacheFile = reCheckFile[x], fileName = cacheFile.replace(/\?v=[0-9A-Za-z]+$/g, ''), 
+				var cacheFile = reCheckFile[x], fileName = cacheFile.replace(/\?v=[0-9A-Za-z]+/g, ''), 
 					mtime = fs.statSync(cwd + '/' + fileName).mtime,
 					mtime = util.format('%d%d%d%d%d', mtime.getFullYear(), mtime.getMonth() + 1, mtime.getDate(), mtime.getHours(), mtime.getMinutes());
 
