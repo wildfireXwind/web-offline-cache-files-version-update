@@ -37,7 +37,7 @@ for(var i in manifestFiles){
                     reCheckFile.push(cacheFile);
                     var fileName = cacheFile.replace(/\?v=[0-9A-Za-z]+/g, ''), mtime = fs.statSync(cwd + '/' + fileName).mtime;
                     mtime = util.format('%d%d%d%d%d', mtime.getFullYear(), mtime.getMonth() + 1, mtime.getDate(), mtime.getHours(), mtime.getMinutes());
-
+					
                     if(mtime !== getCacheVersion(cacheFile)){
                         cacheFiles[path.basename(fileName)] = mtime; //映射cache文件和cache文件的修改日期
                     }
@@ -49,10 +49,10 @@ for(var i in manifestFiles){
 }
 
 var cacheFilesRegExpArr = [], cacheFilesRegExp;
-for(var i in cacheFiles){ cacheFilesRegExpArr.push(i); }
+for(var i in cacheFiles){ cacheFilesRegExpArr.push(i.replace('.', '\\.')); }	
 
 if(cacheFilesRegExpArr.length){
-    cacheFilesRegExp = new RegExp('[\\(\'"][A-Za-z0-9/\._-]*(' + cacheFilesRegExpArr.join('|') + ')(?:\\?v=[0-9A-Za-z]+)?[\\)\'"]', 'g'); //匹配所有cache文件的正则
+    cacheFilesRegExp = new RegExp('[\\\\\\(\'"][A-Za-z0-9/\._-]*(' + cacheFilesRegExpArr.join('|') + ')(?:\\?v=[0-9A-Za-z]+)?[\\\\\\)\'"]', 'g'); //匹配所有cache文件的正则
 
     //查找可能含cache文件的文件，并替换版本号
     var len = 0;
@@ -71,17 +71,24 @@ if(cacheFilesRegExpArr.length){
                                 if(!err){
                                     data = decoder.write(data);
                                     if(cacheFilesRegExp.test(data)){
-                                        ++len;
+										var update = false;
                                         data = data.replace(cacheFilesRegExp, function(matchStr, file){
-                                            matchStr = matchStr.replace(/\?v=[0-9A-Za-z]+/g, '').replace(new RegExp(file, 'g'), file + '?v=' + cacheFiles[file]); //更新缓存文件版本号
+                                            if(cacheFiles[file]){
+												matchStr = matchStr.replace(/\?v=[0-9A-Za-z]+/g, '').replace(new RegExp(file, 'g'), file + '?v=' + cacheFiles[file]); //更新缓存文件版本号
+												update = true;
+											}
                                             return matchStr;
                                         });
-                                        fs.writeFile(filePath, data, function(){ //更新含缓存文件的文件
-                                            console.log('update file:' + filePath);
-											if(!cacheFiles[path.basename(filePath)]){ cacheFilesRegExpArr.push(path.basename(filePath)) }
-											//TODO 有机率出现未完全统计时 len == 0
-                                            !--len && success();
-                                        });
+                                        if(update){
+											++len;
+											fs.writeFile(filePath, data, function(){ //更新含缓存文件的文件
+												console.log('update file:' + filePath);
+												var _filename = path.basename(filePath);
+												if(!cacheFiles[_filename]){ cacheFilesRegExpArr.push(_filename.replace('.', '\\.')) }
+												//TODO 有机率出现未完全统计时 len == 0
+												!--len && success();
+											});
+										}
                                     }
                                 }
                             });
@@ -94,7 +101,8 @@ if(cacheFilesRegExpArr.length){
 
     cacheFilesRegExp && dirIterator(null, function(){
 		//因有多重关联时，如 a-> b-> c，更新c时，a不会更新，需2次修改
-		cacheFilesRegExp = new RegExp('[\\(\'"][A-Za-z0-9/\._-]*(' + cacheFilesRegExpArr.join('|') + ')(?:\\?v=[0-9A-Za-z]+)?[\\)\'"]', 'g'); //再次生成匹配所有cache文件的正则	
+		cacheFilesRegExp = new RegExp('[\\\\\\(\'"][A-Za-z0-9/\._-]*(' + cacheFilesRegExpArr.join('|') + ')(?:\\?v=[0-9A-Za-z]+)?[\\\\\\)\'"]', 'g'); //再次生成匹配所有cache文件的正则	
+		
 		for(var x in reCheckFile){
 			var cacheFile = reCheckFile[x], fileName = cacheFile.replace(/\?v=[0-9A-Za-z]+/g, ''), mtime = fs.statSync(cwd + '/' + fileName).mtime;
 			mtime = util.format('%d%d%d%d%d', mtime.getFullYear(), mtime.getMonth() + 1, mtime.getDate(), mtime.getHours(), mtime.getMinutes());
@@ -107,7 +115,7 @@ if(cacheFilesRegExpArr.length){
 		//重新生成匹配所有cache文件的正则
 		console.log('update again');
 		//TODO 不需要2次修改
-		dirIterator(null, function(){
+		dirIterator(null, function(){		
 			for(var x in reCheckFile){
 				var cacheFile = reCheckFile[x], fileName = cacheFile.replace(/\?v=[0-9A-Za-z]+/g, ''), 
 					mtime = fs.statSync(cwd + '/' + fileName).mtime,
