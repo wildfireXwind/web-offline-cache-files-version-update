@@ -1,9 +1,9 @@
-in windows, create a bat file in your program dir and input follow text:
+In windows, create a bat file in your program dir and type follow text:
 
 @echo off
-@node app.js file path
+@node your app.js path
 pause
 
-when finish edit, then run, it would update all relate files in the program.
+run this, and it would update all resource file URL in the program.
 
-the bat file, you can references to test.bat.
+if you didn't understand how to write the bat file, you can see test.bat.

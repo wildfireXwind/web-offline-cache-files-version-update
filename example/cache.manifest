@@ -2,13 +2,11 @@ CACHE MANIFEST
 # version 201209271441
 
 CACHE:
-js/common.js?v=20121091715
 
-css/style.css?v=20121091713
-
-main.html?v=20121091717
-
-images/more.png?v=20126211322
+main.html?v=201347194
+js/common.js?v=201347195
+css/style.css?v=201347195
+images/more.png?v=20121130953
 
 NETWORK:
 *
