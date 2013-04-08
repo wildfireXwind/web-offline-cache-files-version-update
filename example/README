@@ -4,6 +4,6 @@ In windows, create a bat file in your program dir and type follow text:
 @node your app.js path
 pause
 
-run this, and it would update all resource file URL in the program.
+run this bat, then it would update the URL of all resource file in the program.
 
-if you didn't understand how to write the bat file, you can see test.bat.
+if you didn't understood how to wrote the bat file, you could saw the test.bat.

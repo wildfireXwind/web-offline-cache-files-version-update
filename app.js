@@ -59,7 +59,7 @@ temp_file = null;
 //about find manifest end
 
 if(!needUpdate){
-    console.log('don\'t need update');
+    console.log('There is nothing need to update');
     return false;
 }
 
