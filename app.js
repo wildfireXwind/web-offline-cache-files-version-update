@@ -2,6 +2,11 @@
  * 更新manifest文件的缓存文件版本号，同时关联更新相关文件中被引用的缓存文件版本号
  * 缓存文件的文件名在不同目录下不能相同
  * 所有输出文件编码为utf-8
+ * 
+ * TODO
+ * support multi master file
+ * check fallback field
+ * 
  */
 
 var util = require('util'),
