@@ -28,6 +28,11 @@ var getRecVersion = (function(){
     }
 })();
 
+var fileMtimeToVersion = function(fileFullPath){
+	var mtime = fs.statSync(fileFullPath).mtime;
+	return util.format('%d%d%d%d%d', mtime.getFullYear(), mtime.getMonth() + 1, mtime.getDate(), mtime.getHours(), mtime.getMinutes());
+}
+
 //about find  manifest
 var manifestFilter = /\.manifest$/, manifestArr = fs.readdirSync(cwd), temp_file,
     manifest, manifestData, needUpdate;
@@ -45,10 +50,13 @@ for(var i in manifestArr){
                 var str = recources[x];
                 if(str == 'NETWORK:' || str == 'FALLBACK:'){ break; }
                 else if(isFileFilter.test(str)){ //如果是匹配文件
-                    var filePath = str.replace(/\?v=[0-9A-Za-z]+/g, ''), fullFilePath = cwd + '/' + filePath, mtime = getRecVersion(str) || '0';
-                    resFiles[path.basename(filePath)] = mtime; //放到resFiles内
+                    var filePath = str.replace(/\?v=[0-9A-Za-z]+/g, ''), fullFilePath = cwd + '/' + filePath, 
+						fileVer = getRecVersion(str) || '0';
+						
+                    resFiles[path.basename(filePath)] = fileVer; //放到resFiles内
                     resFilesFullFilePath[path.basename(filePath)] = fullFilePath;
-                    if(mtime !== getRecVersion(str)){ //版本号不一致
+					
+                    if(fileMtimeToVersion(fullFilePath) !== fileVer){ //版本号不一致
                         needUpdate = true;
                     }
                 }
@@ -64,7 +72,7 @@ temp_file = null;
 //about find manifest end
 
 if(!needUpdate){
-    console.log('There is nothing need to update');
+    console.log('There is nothing to be updated');
     return false;
 }
 
@@ -73,7 +81,8 @@ var recourcesRegExpArr = [], recourcesRegExp;
 for(var i in resFiles){ recourcesRegExpArr.push(i.replace(/\./g, '\\.')); }
 
 if(recourcesRegExpArr.length){
-    recourcesRegExp = new RegExp('[(\'"][A-Za-z0-9/\._-]*(' + recourcesRegExpArr.join('|') + ')(?:\\?v=[0-9A-Za-z]+)?[)\'"]', 'g'); //匹配所有资源文件的正则
+    recourcesRegExp = new RegExp('[(\'"][A-Za-z0-9/\._-]*(' + recourcesRegExpArr.join('|') + ')(?:\\?v=[0-9A-Za-z]+)?[)\'"]', 'g');
+	//匹配所有资源文件的正则
     recourcesRegExpArr = null;
 
     //查找含资源文件的文件，并替换资源文件URL
@@ -148,8 +157,7 @@ if(recourcesRegExpArr.length){
     getMatchFiles();
     update(function(){
         for(var x in resFiles){
-            var mtime = fs.statSync(resFilesFullFilePath[x]).mtime;
-            resFiles[x] = util.format('%d%d%d%d%d', mtime.getFullYear(), mtime.getMonth() + 1, mtime.getDate(), mtime.getHours(), mtime.getMinutes()); //映射cache文件和cache文件的修改日期
+            resFiles[x] = fileMtimeToVersion(resFilesFullFilePath[x]) ; //映射cache文件和cache文件的修改日期
         }
     }, function(){
         for(var x in resFiles){
