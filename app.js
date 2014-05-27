@@ -21,7 +21,7 @@ var StringDecoder = require('string_decoder').StringDecoder, decoder = new Strin
 var resFiles = {}, resFilesFullFilePath = {}, reCheckFile = [];
 
 //获取版本号
-var getRecVersion = (function(){
+var getResourceVersion = (function(){
     var versionRegExp = /\?v=(\d+)/;
     return function(str){
         return versionRegExp.test(str) ? RegExp.$1 : '';
@@ -51,7 +51,7 @@ for(var i in manifestArr){
                 if(str == 'NETWORK:' || str == 'FALLBACK:'){ break; }
                 else if(isFileFilter.test(str)){ //如果是匹配文件
                     var filePath = str.replace(/\?v=[0-9A-Za-z]+/g, ''), fullFilePath = cwd + '/' + filePath, 
-						fileVer = getRecVersion(str) || '0';
+						fileVer = getResourceVersion(str) || '0';
 						
                     resFiles[path.basename(filePath)] = fileVer; //放到resFiles内
                     resFilesFullFilePath[path.basename(filePath)] = fullFilePath;
@@ -80,13 +80,20 @@ if(!needUpdate){
 var recourcesRegExpArr = [], recourcesRegExp;
 for(var i in resFiles){ recourcesRegExpArr.push(i.replace(/\./g, '\\.')); }
 
+
 if(recourcesRegExpArr.length){
     recourcesRegExp = new RegExp('[(\'"][A-Za-z0-9/\._-]*(' + recourcesRegExpArr.join('|') + ')(?:\\?v=[0-9A-Za-z]+)?[)\'"]', 'g');
 	//匹配所有资源文件的正则
     recourcesRegExpArr = null;
 
     //查找含资源文件的文件，并替换资源文件URL
-    var fileArr = [], hasRecFileArr = [], writeFileArr = [];
+    var fileArr = [], hasResourceFileArr = [], writeFileArr = [];
+	
+	function updateResFilesVer(){
+        for(var x in resFiles){
+            resFiles[x] = fileMtimeToVersion(resFilesFullFilePath[x]) ; //映射cache文件和cache文件的修改日期
+        }
+	}
 
     function getMatchFiles(dir){
         var dir = dir || cwd, fileList = fs.readdirSync(dir);
@@ -116,13 +123,13 @@ if(recourcesRegExpArr.length){
     }
 
     function update(callback, finish){
-        var max, arr, noHasRecFileArr = false, versionRegExp = /\?v=[0-9A-Za-z]+/g;
-        if(hasRecFileArr.length){
-            arr = hasRecFileArr;
+        var max, arr, addToResourceFileArr = false, versionRegExp = /\?v=[0-9A-Za-z]+/g;
+        if(hasResourceFileArr.length){
+            arr = hasResourceFileArr;
         }else{
             arr = fileArr;
             fileArr = null;
-            noHasRecFileArr = true;
+            addToResourceFileArr = true;
         }
         max = arr.length;
 
@@ -135,13 +142,13 @@ if(recourcesRegExpArr.length){
                     if(recourcesRegExp.test(data)){
                         var hasUpdate = false;
                         data = data.replace(recourcesRegExp, function(matchStr, fileName){
-                            if(resFiles[fileName] !== getRecVersion(matchStr)){
+                            if(resFiles[fileName] !== getResourceVersion(matchStr)){
                                 matchStr = matchStr.replace(versionRegExp, '').replace(new RegExp(fileName, 'g'), fileName + '?v=' + resFiles[fileName]); //更新缓存文件版本号
                                 hasUpdate = true;
                             }
                             return matchStr;
                         });
-                        noHasRecFileArr && hasRecFileArr.push(filePath);
+                        addToResourceFileArr && hasResourceFileArr.push(filePath);
                         hasUpdate && writeFileArr.push([filePath, data]);
                     }
                     ++hasReadNum === max && (writeFileArr.length ? writeFile(function(){ callback(), update(callback, finish); }) : finish());
@@ -155,11 +162,8 @@ if(recourcesRegExpArr.length){
 
     //run
     getMatchFiles();
-    update(function(){
-        for(var x in resFiles){
-            resFiles[x] = fileMtimeToVersion(resFilesFullFilePath[x]) ; //映射cache文件和cache文件的修改日期
-        }
-    }, function(){
+	updateResFilesVer();
+    update(updateResFilesVer, function(){
         for(var x in resFiles){
             //更新manifest里的相应缓存文件版本号
             manifestData = manifestData.replace(new RegExp(x + '(\\?v=[0-9A-Za-z]+)*', 'g'), x + '?v=' + resFiles[x]);
